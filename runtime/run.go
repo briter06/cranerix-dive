@@ -3,6 +3,7 @@ package runtime
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -74,7 +75,28 @@ func run(enableUi bool, options Options, imageResolver image.Resolver, events ev
 
 	if options.ExportTree {
 
-		events.message("This works!")
+		treeStack := filetree.NewComparer(analysis.RefTrees)
+		errors := treeStack.BuildCache()
+		if errors != nil {
+			for _, err := range errors {
+				events.message("  " + err.Error())
+			}
+			if !options.IgnoreErrors {
+				events.exitWithError(fmt.Errorf("file tree has path errors (use '--ignore-errors' to attempt to continue)"))
+				return
+			}
+		}
+
+		re := regexp.MustCompile(`echo Layer_[0-9]+`)
+
+		for i := 1; i < len(analysis.Layers); i++ {
+			prev_command := analysis.Layers[i-1].Command
+			command := analysis.Layers[i].Command
+			layer_custom_id := re.FindString(prev_command)
+			if layer_custom_id != "" {
+				fmt.Println("Layer command:", i, command)
+			}
+		}
 
 		return
 
