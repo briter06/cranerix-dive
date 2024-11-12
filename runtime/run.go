@@ -72,7 +72,13 @@ func run(enableUi bool, options Options, imageResolver image.Resolver, events ev
 		return
 	}
 
-	if options.Ci {
+	if options.ExportTree {
+
+		events.message("This works!")
+
+		return
+
+	} else if options.Ci {
 		events.message(fmt.Sprintf("  efficiency: %2.4f %%", analysis.Efficiency*100))
 		events.message(fmt.Sprintf("  wastedBytes: %d bytes (%s)", analysis.WastedBytes, humanize.Bytes(analysis.WastedBytes)))
 		events.message(fmt.Sprintf("  userWastedPercent: %2.4f %%", analysis.WastedUserPercent*100))

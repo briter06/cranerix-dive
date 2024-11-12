@@ -67,6 +67,7 @@ func doAnalyzeCmd(cmd *cobra.Command, args []string) {
 		Source:       sourceType,
 		Image:        imageStr,
 		ExportFile:   exportFile,
+		ExportTree:   exportTree,
 		CiConfig:     ciConfig,
 		IgnoreErrors: viper.GetBool("ignore-errors") || ignoreErrors,
 	})
