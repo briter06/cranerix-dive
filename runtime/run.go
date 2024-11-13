@@ -63,6 +63,8 @@ func run(enableUi bool, options Options, imageResolver image.Resolver, events ev
 	doExport := options.ExportFile != ""
 	doBuild := len(options.BuildArgs) > 0
 
+	verbose := !options.ExportTree
+
 	if doBuild {
 		events.message(utils.TitleFormat("Building image..."))
 		img, err = imageResolver.Build(options.BuildArgs)
@@ -71,8 +73,10 @@ func run(enableUi bool, options Options, imageResolver image.Resolver, events ev
 			return
 		}
 	} else {
-		events.message(utils.TitleFormat("Image Source: ") + options.Source.String() + "://" + options.Image)
-		events.message(utils.TitleFormat("Fetching image...") + " (this can take a while for large images)")
+		if verbose {
+			events.message(utils.TitleFormat("Image Source: ") + options.Source.String() + "://" + options.Image)
+			events.message(utils.TitleFormat("Fetching image...") + " (this can take a while for large images)")
+		}
 		img, err = imageResolver.Fetch(options.Image)
 		if err != nil {
 			events.exitWithErrorMessage("cannot fetch image", err)
@@ -80,7 +84,9 @@ func run(enableUi bool, options Options, imageResolver image.Resolver, events ev
 		}
 	}
 
-	events.message(utils.TitleFormat("Analyzing image..."))
+	if verbose {
+		events.message(utils.TitleFormat("Analyzing image..."))
+	}
 	analysis, err := img.Analyze()
 	if err != nil {
 		events.exitWithErrorMessage("cannot analyze image", err)
