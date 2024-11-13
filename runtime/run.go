@@ -27,9 +27,13 @@ type FileNodeJSON struct {
 	Path     string                   `json:"path,omitempty"`
 }
 
-type ResultJSON struct {
+type EntryJSON struct {
 	Command string        `json:"command,omitempty"`
 	Tree    *FileNodeJSON `json:"tree,omitempty"`
+}
+
+type ResultJSON struct {
+	Layers []*EntryJSON `json:"layers,omitempty"`
 }
 
 func ConvertToJSON(node *filetree.FileNode) *FileNodeJSON {
@@ -48,7 +52,9 @@ func ConvertToJSON(node *filetree.FileNode) *FileNodeJSON {
 
 	// Recursively convert children and the next node
 	for key, value := range node.Children {
-		jsonNode.Children[key] = ConvertToJSON(value)
+		if value.Data.DiffType != filetree.Unmodified {
+			jsonNode.Children[key] = ConvertToJSON(value)
+		}
 	}
 
 	return jsonNode
@@ -128,19 +134,28 @@ func run(enableUi bool, options Options, imageResolver image.Resolver, events ev
 			}
 		}
 
-		results := []*ResultJSON{}
+		entries := []*EntryJSON{}
+		bottomStart := 0
+		bottomStop := 0
 		for i := 0; i < len(analysis.Layers); i++ {
+			if i != 0 {
+				bottomStop = i - 1
+			}
 			command := analysis.Layers[i].Command
-			tree := analysis.RefTrees[i]
+			tree, _ := treeStack.GetTree(filetree.NewTreeIndexKey(bottomStart, bottomStop, i, i))
 			jsonTree := ConvertToJSON(tree.Root)
-			jsonNode := &ResultJSON{
+			jsonNode := &EntryJSON{
 				Command: command,
 				Tree:    jsonTree,
 			}
-			results = append(results, jsonNode)
+			entries = append(entries, jsonNode)
 		}
 
-		jsonData, err := json.MarshalIndent(results, "", "  ")
+		result := &ResultJSON{
+			Layers: entries,
+		}
+
+		jsonData, err := json.MarshalIndent(result, "", "  ")
 		if err != nil {
 			fmt.Println(err.Error())
 		}
