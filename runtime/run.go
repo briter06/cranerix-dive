@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"regexp"
@@ -18,6 +19,41 @@ import (
 	"github.com/wagoodman/dive/runtime/ui"
 	"github.com/wagoodman/dive/utils"
 )
+
+type FileNodeJSON struct {
+	Size     int64                    `json:"size,omitempty"`
+	Name     string                   `json:"name,omitempty"`
+	Data     any                      `json:"data,omitempty"`
+	Children map[string]*FileNodeJSON `json:"children,omitempty"`
+	Path     string                   `json:"path,omitempty"`
+}
+
+type ResultJSON struct {
+	Command string        `json:"command,omitempty"`
+	Tree    *FileNodeJSON `json:"tree,omitempty"`
+}
+
+func ConvertToJSON(node *filetree.FileNode) *FileNodeJSON {
+	if node == nil {
+		return nil
+	}
+
+	// Create an ASTNodeJSON with basic fields
+	jsonNode := &FileNodeJSON{
+		Size:     node.Size,
+		Name:     node.Name,
+		Data:     node.Data,
+		Path:     node.Path(),
+		Children: make(map[string]*FileNodeJSON),
+	}
+
+	// Recursively convert children and the next node
+	for key, value := range node.Children {
+		jsonNode.Children[key] = ConvertToJSON(value)
+	}
+
+	return jsonNode
+}
 
 func run(enableUi bool, options Options, imageResolver image.Resolver, events eventChannel, filesystem afero.Fs) {
 	var img *image.Image
@@ -88,15 +124,27 @@ func run(enableUi bool, options Options, imageResolver image.Resolver, events ev
 		}
 
 		re := regexp.MustCompile(`echo Layer_[0-9]+`)
-
+		results := []*ResultJSON{}
 		for i := 1; i < len(analysis.Layers); i++ {
 			prev_command := analysis.Layers[i-1].Command
 			command := analysis.Layers[i].Command
 			layer_custom_id := re.FindString(prev_command)
 			if layer_custom_id != "" {
-				fmt.Println("Layer command:", i, command)
+				tree := analysis.RefTrees[i]
+				jsonTree := ConvertToJSON(tree.Root)
+				jsonNode := &ResultJSON{
+					Command: command,
+					Tree:    jsonTree,
+				}
+				results = append(results, jsonNode)
 			}
 		}
+
+		jsonData, err := json.MarshalIndent(results, "", "  ")
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		fmt.Println(string(jsonData))
 
 		return
 
