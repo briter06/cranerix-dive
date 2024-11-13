@@ -29,8 +29,9 @@ type FileNodeJSON struct {
 }
 
 type ResultJSON struct {
-	Command string        `json:"command,omitempty"`
-	Tree    *FileNodeJSON `json:"tree,omitempty"`
+	Identifier string        `json:"identifier,omitempty"`
+	Command    string        `json:"command,omitempty"`
+	Tree       *FileNodeJSON `json:"tree,omitempty"`
 }
 
 func ConvertToJSON(node *filetree.FileNode) *FileNodeJSON {
@@ -129,7 +130,7 @@ func run(enableUi bool, options Options, imageResolver image.Resolver, events ev
 			}
 		}
 
-		re := regexp.MustCompile(`echo Layer_[0-9]+`)
+		re := regexp.MustCompile(`echo Cranerix_Identifier_[0-9]+`)
 		results := []*ResultJSON{}
 		for i := 1; i < len(analysis.Layers); i++ {
 			prev_command := analysis.Layers[i-1].Command
@@ -139,8 +140,9 @@ func run(enableUi bool, options Options, imageResolver image.Resolver, events ev
 				tree := analysis.RefTrees[i]
 				jsonTree := ConvertToJSON(tree.Root)
 				jsonNode := &ResultJSON{
-					Command: command,
-					Tree:    jsonTree,
+					Identifier: layer_custom_id,
+					Command:    command,
+					Tree:       jsonTree,
 				}
 				results = append(results, jsonNode)
 			}
