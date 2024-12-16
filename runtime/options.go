@@ -12,7 +12,7 @@ type Options struct {
 	Source       dive.ImageSource
 	IgnoreErrors bool
 	ExportFile   string
-	ExportTree   bool
+	ExportTree   string
 	CiConfig     *viper.Viper
 	BuildArgs    []string
 }

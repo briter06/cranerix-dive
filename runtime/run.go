@@ -68,8 +68,6 @@ func run(enableUi bool, options Options, imageResolver image.Resolver, events ev
 	doExport := options.ExportFile != ""
 	doBuild := len(options.BuildArgs) > 0
 
-	verbose := !options.ExportTree
-
 	if doBuild {
 		events.message(utils.TitleFormat("Building image..."))
 		img, err = imageResolver.Build(options.BuildArgs)
@@ -78,10 +76,8 @@ func run(enableUi bool, options Options, imageResolver image.Resolver, events ev
 			return
 		}
 	} else {
-		if verbose {
-			events.message(utils.TitleFormat("Image Source: ") + options.Source.String() + "://" + options.Image)
-			events.message(utils.TitleFormat("Fetching image...") + " (this can take a while for large images)")
-		}
+		events.message(utils.TitleFormat("Image Source: ") + options.Source.String() + "://" + options.Image)
+		events.message(utils.TitleFormat("Fetching image...") + " (this can take a while for large images)")
 		img, err = imageResolver.Fetch(options.Image)
 		if err != nil {
 			events.exitWithErrorMessage("cannot fetch image", err)
@@ -89,9 +85,7 @@ func run(enableUi bool, options Options, imageResolver image.Resolver, events ev
 		}
 	}
 
-	if verbose {
-		events.message(utils.TitleFormat("Analyzing image..."))
-	}
+	events.message(utils.TitleFormat("Analyzing image..."))
 	analysis, err := img.Analyze()
 	if err != nil {
 		events.exitWithErrorMessage("cannot analyze image", err)
@@ -120,7 +114,7 @@ func run(enableUi bool, options Options, imageResolver image.Resolver, events ev
 		return
 	}
 
-	if options.ExportTree {
+	if options.ExportTree != "" {
 
 		treeStack := filetree.NewComparer(analysis.RefTrees)
 		errors := treeStack.BuildCache()
@@ -154,12 +148,20 @@ func run(enableUi bool, options Options, imageResolver image.Resolver, events ev
 		result := &ResultJSON{
 			Layers: entries,
 		}
-
-		jsonData, err := json.MarshalIndent(result, "", "  ")
+		file, err := os.Create(options.ExportTree)
 		if err != nil {
-			fmt.Println(err.Error())
+			fmt.Println("Error creating file:", err)
+			return
 		}
-		fmt.Println(string(jsonData))
+		defer file.Close()
+
+		encoder := json.NewEncoder(file)
+		if err := encoder.Encode(result); err != nil {
+			fmt.Println("Error encoding JSON:", err)
+			return
+		}
+
+		fmt.Println("Tree exported successfully.")
 
 		return
 
